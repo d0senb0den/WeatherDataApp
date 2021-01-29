@@ -1,0 +1,299 @@
+﻿@page "/fetchdata"
+
+@using WeatherDataApp.Services
+@using WeatherDataApp.Models
+@inject IFetchDataService FetchDataService
+
+<h1>
+    Väderprognos
+</h1>
+
+<p>Denna komponent visar hämtning av data från en tjänst. <br />
+Med hjälp av knapparna kan du få fram medeltemperatur för en specifik dag, <br />
+sortering av olika data samt en koll på metereologisk höst och vinter.</p>
+
+<select class="form-select" aria-label="Default select example" @onchange="LocationChanged">
+    <option selected value="Inne">Inne</option>
+    <option value="Ute">Ute</option>
+</select>
+
+<br />
+<br />
+
+<button type="button" class="btn btn-primary" @onclick="ToggleAvgTemp">Avg Temp</button>
+<button type="button" class="btn btn-primary" @onclick="OrderData">Sortera</button>
+<button type="button" class="btn btn-primary" @onclick="showStartWinter">Vinter</button>
+<button type="button" class="btn btn-primary" @onclick="showStartFall">Höst</button>
+
+<br />
+<br />
+
+@if (showAvgTemp) @*Om knappen för Average Temperature är true så visas knappen för datum.*@
+{
+    //<label for="start">Start date:</label>
+    <input type="date" id="start" name="trip-start"
+           value="2017-01-10"
+           min="2016-05-31" max="2017-01-10" @onchange="DateChanged">
+}
+
+<br />
+<br />
+@if (showTemperatureReadings)
+{
+    @if (temperatureReadings != null)
+    {
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th><button type="button" @onclick="SortDate">Datum</button></th>
+                    <th><button type="button">Plats</button></th>
+                    <th><button type="button" @onclick="SortTemp">Medeltemp &#8451;</button></th>
+                    <th><button type="button" @onclick="SortHumid">Medelluftfukt</button></th>
+                    <th><button type="button" @onclick="SortMoldrisk">Mögelrisk</button></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var tempReading in temperatureReadings.Where(l => l.Location == showLocation))
+                {
+                    <tr>
+                        <td>@tempReading.Date.ToShortDateString()</td>
+                        <td>@tempReading.Location</td>
+                        <td>@tempReading.AverageTemperature &#8451;</td>
+                        <td>@tempReading.AverageHumidity %</td>
+                        <td>@tempReading.MoldRisk %</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@if (showDataFromDay)
+{
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Datum</th>
+                <th>Medeltemp &#8451;</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>@specDate</td>
+                <td>@AvgDateTemp &#8451;</td>
+            </tr>
+        </tbody>
+    </table>
+}
+
+@if (showWinterData)
+{
+    <h4>@dateStartWinter</h4>
+}
+@if (showFallData)
+{
+    <h4>@dateStartFall</h4>
+}
+
+@code
+{
+    private List<TemperatureReadingModel> temperatureReadings;
+    private bool showAvgTemp, showDataFromDay, showTemperatureReadings, showWinterData, showFallData;
+    private double AvgDateTemp;
+    private string specDate;
+    private string showLocation = "Inne";
+    private bool dateClicked, tempClicked, humidClicked, moldClicked;
+    private string dateStartWinter, dateStartFall;
+
+    private void DateChanged(ChangeEventArgs e)
+    {
+        showFallData = false;
+        showWinterData = false;
+        showTemperatureReadings = false;
+        specDate = (string)e.Value;
+        AvgDateTemp = FetchDataService.GetDateAvgTemp(specDate, showLocation);
+        showDataFromDay = true;
+    }
+
+    private void LocationChanged(ChangeEventArgs l)
+    {
+        showLocation = (string)l.Value;
+
+        if (specDate != null && showAvgTemp)
+        {
+            AvgDateTemp = FetchDataService.GetDateAvgTemp(specDate, showLocation);
+        }
+    }
+
+    private void ToggleAvgTemp()
+    {
+        showAvgTemp = !showAvgTemp;
+    }
+
+    private void OrderData()
+    {
+        showFallData = false;
+        showWinterData = false;
+        showDataFromDay = false;
+        showAvgTemp = false;
+        showTemperatureReadings = true;
+
+        if (temperatureReadings == null)
+        {
+            temperatureReadings = FetchDataService.GetData();
+        }
+    }
+
+    private void SortDate()
+    {
+        dateClicked = !dateClicked;
+        if (dateClicked)
+        {
+            temperatureReadings = temperatureReadings.OrderBy(d => d.Date).ToList();
+        }
+        else if (dateClicked == false)
+        {
+            temperatureReadings = temperatureReadings.OrderByDescending(d => d.Date).ToList();
+        }
+
+    }
+    private void SortTemp()
+    {
+        tempClicked = !tempClicked;
+        if (tempClicked)
+        {
+            temperatureReadings = temperatureReadings.OrderBy(d => d.AverageTemperature).ToList();
+        }
+        else if (tempClicked == false)
+        {
+            temperatureReadings = temperatureReadings.OrderByDescending(d => d.AverageTemperature).ToList();
+        }
+
+    }
+    private void SortHumid()
+    {
+        humidClicked = !humidClicked;
+        if (humidClicked)
+        {
+            temperatureReadings = temperatureReadings.OrderBy(d => d.AverageHumidity).ToList();
+        }
+        else if (humidClicked == false)
+        {
+            temperatureReadings = temperatureReadings.OrderByDescending(d => d.AverageHumidity).ToList();
+        }
+    }
+    private void SortMoldrisk()
+    {
+
+        moldClicked = !moldClicked;
+        if (moldClicked)
+        {
+            temperatureReadings = temperatureReadings.OrderBy(d => d.MoldRisk).ToList();
+        }
+        else if (moldClicked == false)
+        {
+            temperatureReadings = temperatureReadings.OrderByDescending(d => d.MoldRisk).ToList();
+        }
+    }
+
+    private void showStartWinter()
+    {
+        // Uträkningar för meterologisk vinter.
+        //Räknar med 5 dagar i följd där medeltemperaturen är mindre eller lika med 0 för vinter.
+
+        showDataFromDay = false;
+        showAvgTemp = false;
+        showTemperatureReadings = false;
+        showFallData = false;
+        showWinterData = true;
+        bool noWinter = true;
+
+        if (temperatureReadings == null)
+        {
+            temperatureReadings = FetchDataService.GetData();
+        }
+
+        var startWinter = temperatureReadings
+            .Where(d => d.Location == "Ute")
+            .OrderBy(d => d.Date)
+            .ToList();
+
+        for (int i = 0; i < startWinter.Count; i++)
+        {
+            if (startWinter[i].AverageTemperature <= 0 && i + 4 < startWinter.Count)
+            {
+                if (startWinter[i + 1].AverageTemperature <= 0)
+                {
+                    if (startWinter[i + 2].AverageTemperature <= 0)
+                    {
+                        if (startWinter[i + 3].AverageTemperature <= 0)
+                        {
+                            if (startWinter[i + 4].AverageTemperature <= 0)
+                            {
+                                noWinter = false;
+                                dateStartWinter = $"Detta år började meteorologiska vintern {startWinter[i].Date.ToLongDateString()}";
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            if (noWinter)
+            {
+                dateStartWinter = $"Ingen meteorologisk vinter hittades.";
+            }
+        }
+    }
+    private void showStartFall()
+    {
+        // Uträkningar för meterologisk höst.
+        // Räknar med 5 dagar i följd där medeltemperaturen är större än 0 och mindre än 10.
+
+        showDataFromDay = false;
+        showAvgTemp = false;
+        showTemperatureReadings = false;
+        showWinterData = false;
+        showFallData = true;
+        bool noFall = true;
+
+        if (temperatureReadings == null)
+        {
+            temperatureReadings = FetchDataService.GetData();
+        }
+
+        var startFall = temperatureReadings
+            .Where(d => d.Location == "Ute")
+            .OrderBy(d => d.Date)
+            .ToList();
+
+        for (int i = 0; i < startFall.Count; i++)
+        {
+            if ((startFall[i].AverageTemperature > 0 && startFall[i].AverageTemperature < 10) && i + 4 < startFall.Count)
+            {
+                if (startFall[i + 1].AverageTemperature > 0 && startFall[i + 1].AverageTemperature < 10)
+                {
+                    if (startFall[i + 2].AverageTemperature > 0 && startFall[i + 2].AverageTemperature < 10)
+                    {
+                        if (startFall[i + 3].AverageTemperature > 0 && startFall[i + 3].AverageTemperature < 10)
+                        {
+                            if (startFall[i + 4].AverageTemperature > 0 && startFall[i + 4].AverageTemperature < 10)
+                            {
+                                noFall = false;
+                                dateStartFall = $"Detta år började meteorologiska hösten {startFall[i].Date.ToLongDateString()}";
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            if (noFall)
+            {
+                dateStartFall = $"Ingen meteorologisk höst hittades.";
+            }
+        }
+    }
+
+
+}

@@ -1,0 +1,50 @@
+﻿@using WeatherDataApp.Services
+@inject IAddDataService DataService
+
+@page "/AddData"
+
+@*Kommentar: Tvingar filen att köra .csv, skriver sedan ut en response där det står om det funkar eller ej*@
+
+<h4>Filuppladdning</h4>
+
+<br />
+
+<p>Här kan du ladda upp en fil som läser in all data.</p>
+
+<br />
+
+<p>
+    <InputFile OnChange="@OnInputFileChange" accept=".csv" />
+</p>
+
+@if (response != string.Empty)
+{
+    <h4>Response</h4>
+    if (response == "Success!")
+    {
+        <span class="badge-success">@response</span>
+    }
+    else
+    {
+        <span class="badge-danger">@response</span>
+    }
+}
+
+@code {
+
+    private string response = string.Empty;
+
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        IBrowserFile file = e.File;
+        var isSuccessful = await DataService.ConvertAndAdd(file);
+        if (isSuccessful)
+        {
+            response = "Success!";
+        }
+        else
+        {
+            response = "Failed!";
+        }
+    }
+}
